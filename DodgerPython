@@ -21,6 +21,7 @@ PLAYER_VEL = 8
 
 STAR_WIDTH = 10
 STAR_HEIGHT = 20
+STAR_VEL = 5
 
 # Creating the font object
 
@@ -28,13 +29,16 @@ FONT = pygame.font.SysFont('Comic Sans MS', 25
                            )
 # Drawing the Objects on the screen
 
-def draw(player, elapsed_time):
+def draw(player, elapsed_time, stars):
     WIN.blit(BG, (0, 0))
 
     time_text = FONT.render(f"Time: {round(elapsed_time)}s", 1, "white")
     WIN.blit(time_text, (10, 10))
     #Draw Player Rectangle
     pygame.draw.rect(WIN, 'red', player)
+    # Code to draw the Star rectangles
+    for star in stars:
+        pygame.draw.rect(WIN, 'orange', star)
     # We want to refresh each change in the draw
     pygame.display.update()
 
@@ -56,15 +60,22 @@ def main():
     star_count = 0
 
     stars = []
+    hit = False
 
     while run:
-        star_count += clock.tick(60)
+        star_count += clock.tick(60) #returns number of miliseconds since the last tick
         elapsed_time = time.time() - start_time
 
+        #Adding stars to the screen, in increments of 3 stars
         if star_count > star_add_increment:
             for _ in range(3):
+                # Decides where on the screen (left to right) the star appears
                 star_x = random.randint(0, WIDTH - STAR_WIDTH)
-                star = pygame.Rect(star_x, -STAR_HEIGHT)
+                star = pygame.Rect(star_x, -STAR_HEIGHT, STAR_WIDTH, STAR_HEIGHT) #Star starts off screen
+                stars.append(star)
+
+            star_add_increment = max(200,star_add_increment - 50)
+            star_count = 0
 
         # We want to check if the user presses the Quit button
         for event in pygame.event.get():
@@ -79,7 +90,32 @@ def main():
         if keys[pygame.K_RIGHT] and player.x + PLAYER_VEL + player.width <= WIDTH:
             player.x += PLAYER_VEL
 
-        draw(player, elapsed_time)
+        #Moving our stars down the screen
+        for star in stars[:]: #This creates a copy of our stars list
+            #since we do not want to accidentally alter the original list
+            star.y += STAR_VEL
+            #This one checks if the star moves off the bottom of the screen,
+            # then we remove it
+            if star.y > HEIGHT:
+                stars.remove(star)
+            #This one checks if the star hits the player, then we remove it
+            elif star.y + star.height >= player.y and star.colliderect(player):
+                stars.remove(star)
+                hit = True
+                break
+
+        #Ending the game if you hit a star
+        if hit:
+            lost_text = FONT.render("You lose!", 1, (255, 255, 255))
+            #Making sure the losing text shows up in the middle of the screen
+            WIN.blit(lost_text, (WIDTH/2 - lost_text.get_width()/2, HEIGHT/2 - lost_text.get_height()/2))
+            pygame.display.update()
+            #Freeze game to see text
+            pygame.time.delay(4000)
+            #ends game
+            break
+
+        draw(player, elapsed_time, stars)
 
     pygame.quit()
 
